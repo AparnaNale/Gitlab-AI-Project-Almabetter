@@ -103,6 +103,26 @@ def on_startup():
     # Creates tables in your Supabase database if they don't exist yet.
     init_db()
 
+    # UPDATED FOR DEPLOYMENT (Render free tier):
+    # Render's free tier uses an ephemeral disk — anything written to
+    # local disk (like backend/chroma_data/) is wiped every time the
+    # service restarts or redeploys. Without this, the Chroma knowledge
+    # base would stay empty after every deploy, causing "No Source
+    # Material Found" / "0 Sources" in the Context Preview screen even
+    # though the data/ folder itself is fine.
+    # Running the ingest here means the knowledge base is rebuilt from
+    # the data/ folder automatically on every startup, so it's always
+    # populated without needing a paid persistent disk.
+    try:
+        from retrieval.ingest_knowledge import ingest_all
+        count = ingest_all()
+        print(f"[STARTUP] Knowledge base ingested: {count} chunks loaded.")
+    except Exception as exc:
+        # Don't let a knowledge-base hiccup prevent the whole app from
+        # starting — the workflow still runs fine without it, just
+        # without the extra style-guide/sample-doc grounding.
+        print(f"[STARTUP] Knowledge base ingest failed: {exc}")
+
 
 @app.get("/")
 def health_check():
