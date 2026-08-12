@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import {
   useRouter,
@@ -43,7 +42,7 @@ function extractErrorMessage(data, fallback) {
   return fallback;
 }
 
-export default function VerifyPage() {
+function VerifyPageContent() {
   const router = useRouter();
   const searchParams =
     useSearchParams();
@@ -188,5 +187,13 @@ export default function VerifyPage() {
       </div>
 
     </main>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifyPageContent />
+    </Suspense>
   );
 }
