@@ -31,7 +31,15 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from agents.crew import run_content_workflow
+# NOTE: `agents.crew` (CrewAI) is imported lazily, inside
+# run_agent_workflow() below, instead of here at module level.
+# CrewAI + crewai-tools pull in a very large dependency tree (LangChain,
+# etc.), and importing it at startup means every single instance —
+# even one just checking login/job-status — pays that memory cost.
+# On Render's free tier (512MB), that was pushing memory usage high
+# enough to trigger repeated "Instance failed" OOM restarts (visible in
+# the Events timeline). Loading it only when the workflow actually runs
+# keeps idle memory much lower.
 from auth import accounts
 from auth.accounts import get_current_user, require_role
 from auth.roles import CurrentUser, Role
@@ -395,6 +403,12 @@ def run_agent_workflow(
 
     crud.update_job(db, job_id, status="drafting")
     log_event("agent_workflow_started", job_id=job_id, started_by=user.name)
+
+    # Lazy import: only pulls in crewai/crewai-tools (heavy) at the
+    # moment the workflow actually runs, not at app startup. See the
+    # note next to the top-level imports for why this matters on
+    # Render's free 512MB tier.
+    from agents.crew import run_content_workflow
 
     try:
        
