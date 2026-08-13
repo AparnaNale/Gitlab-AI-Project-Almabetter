@@ -1,5 +1,3 @@
-
-
 from services.gitlab_service import GitLabService
 
 
